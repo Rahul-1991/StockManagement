@@ -1,0 +1,9 @@
+*.pyc
+obj/
+db.sqlite3
+bin/
+ptvs_virtualenv_proxy.py
+StockManagement.pyproj
+venv/
+web.config
+web.debug.config
