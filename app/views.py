@@ -6,7 +6,6 @@ from django.shortcuts import render, render_to_response, redirect
 from django.http import HttpRequest
 from django.template import RequestContext
 from datetime import datetime
-#from forms import LoginForm
 from helpers import apology, lookup
 from models import Users, Portfolio
 from datetime import datetime
@@ -104,8 +103,36 @@ def quote(request):
         stock_info = lookup(symbol)
         if not stock_info:
             return apology("Could not find info for the symbol")
-        print stock_info
         return render_to_response('app/quoted.html', 
-                                  {'stock_info': stock_info, 'session_id': request.session.get('id')})
+                                  {'stock_info': stock_info})
     else:
         return render(request, 'app/quote.html')
+
+def sell(request):
+    if request.method == 'POST':
+        if not request.POST.get('symbol'):
+            return apology('Symbol field cannot be empty')
+        if not request.POST.get('quantity'):
+            return apology('Quantity field cannot be empty')
+        symbol = request.POST.get('symbol')
+        quantity = int(request.POST.get('quantity'))
+        stock_info = lookup(symbol)
+        if not stock_info:
+            return apology('No information available for this symbol')
+        user_portfolio = Portfolio.objects.filter(
+                            id=request.session.get('id')).filter(
+                            symbol=symbol)
+        if not user_portfolio:
+            return apology('No such stock found in your account')
+        stocks_available = user_portfolio[0].quantity
+        if quantity > stocks_available:
+            return apology('You do not have enough stocks to sell')
+        user_portfolio[0].quantity -= quantity
+        user_portfolio[0].price = stock_info.get('price')
+        user_portfolio[0].save()
+        user = Users.objects.filter(id=request.session.get('id'))
+        user[0].cash += stock_info.get('price')
+        user[0].save()
+        return redirect('index')
+    else:
+        return render(request, 'app/sell.html')
