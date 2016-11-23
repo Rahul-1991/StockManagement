@@ -96,3 +96,16 @@ def buy(request):
     else:
         return render(request, 'app/buy.html')
 
+def quote(request):
+    if request.method == 'POST':
+        if not request.POST.get('symbol'):
+            return apology('Symbol field cannot be empty')
+        symbol = request.POST.get('symbol')
+        stock_info = lookup(symbol)
+        if not stock_info:
+            return apology("Could not find info for the symbol")
+        print stock_info
+        return render_to_response('app/quoted.html', 
+                                  {'stock_info': stock_info, 'session_id': request.session.get('id')})
+    else:
+        return render(request, 'app/quote.html')

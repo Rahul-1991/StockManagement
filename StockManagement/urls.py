@@ -15,4 +15,5 @@ urlpatterns = [
     url(r'logout', logout, name='logout'),
     url(r'buy', buy, name='buy'),
     url(r'index', index, name='index'),
+    url('quote', quote, name='quote'),
 ]
