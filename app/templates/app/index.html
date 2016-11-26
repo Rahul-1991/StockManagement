@@ -11,8 +11,8 @@
                 <th>Symbol</th>
                 <th>Name</th>
                 <th>Shares</th>
-                <th>Price</th>
-                <th>TOTAL</th>
+                <th>Current Price</th>
+                <th>Profit/Loss</th>
             </tr>
         </thead>
         <tfoot>
@@ -22,13 +22,13 @@
             </tr>
         </tfoot>
         <tbody>
-            {% for stock_info in user_portfolio_info%}
+            {% for info in user_info %}
                 <tr>
-                    <td>{{ stock_info.symbol }}</td>
-                    <td>{{ stock_info.stock_name }}</td>
-                    <td>{{ stock_info.quantity }}</td>
-                    <td>{{ stock_info.price }}</td>
-                    <td>{{ stock_info.price }}</td>
+                    <td>{{ info.symbol }}</td>
+                    <td>{{ info.stock_name }}</td>
+                    <td>{{ info.quantity }}</td>
+                    <td>{{ info.current_price}}</td>
+                    <td>{{ info.status }}</td>
                 </tr>
             {% endfor %}
         </tbody>

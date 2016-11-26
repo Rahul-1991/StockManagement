@@ -7,17 +7,32 @@ from django.http import HttpRequest
 from django.template import RequestContext
 from datetime import datetime
 from helpers import apology, lookup
-from models import Users, Portfolio
+from models import Users, Portfolio, Transaction
 from datetime import datetime
+from django.core import serializers
+import json
 
 def index(request):
     if not request.session.get('id'):
         return redirect('login')
 
+    empty_stock_rows = Portfolio.objects.filter(quantity__lte=0).delete()
     user_portfolio_info = Portfolio.objects.filter(id=request.session.get('id'))
-    return render_to_response('app/index.html', 
-                              {'user_portfolio_info': user_portfolio_info, 
-                               'session_id': request.session.get('id')})
+    user_info = list()
+    for row in user_portfolio_info:
+        stock_total_cost = row.price
+        current_stock = lookup(row.symbol)
+        current_total_stock_price = current_stock.get('price') * row.quantity
+        serialized_row = serializers.serialize('json', [row])
+        if serialized_row:
+            user_stock_info = json.loads(serialized_row)[0].get('fields')
+            user_stock_info.update({'current_price': lookup(user_stock_info.get('symbol')).get('price')})
+            user_stock_info.update({'status': current_total_stock_price - stock_total_cost})
+            user_info.append(user_stock_info)
+
+    return render(request, 
+                  'app/index.html',
+                  {'user_info': user_info})
 
 def login(request):
     if request.session.get('id'):
@@ -59,7 +74,7 @@ def buy(request):
         if not request.POST.get('quantity'):
             return apology('Quantity field cannot be empty')
 
-        symbol = request.POST.get('symbol')
+        symbol = request.POST.get('symbol').upper()
         quantity = int(request.POST.get('quantity'))
         stock_info = lookup(symbol)
         if not stock_info:
@@ -73,22 +88,25 @@ def buy(request):
         if available_cash >= quantity*stock_info.get('price'):
             user_portfolio = Portfolio.objects.filter(id=request.session.get('id')).filter(symbol=symbol)
             if user_portfolio:
-                user_portfolio[0].price = stock_info.get('price')
+                user_portfolio[0].price += stock_info.get('price') * quantity
                 user_portfolio[0].quantity += quantity
-                user_portfolio[0].timestamp = datetime.now()
                 user_portfolio[0].save()
             else:
                 user_portfolio = Portfolio(
                                     id=request.session.get('id'),
                                     symbol=symbol,
-                                    price=stock_info.get('price'),
+                                    price=stock_info.get('price') * quantity,
                                     quantity=quantity,
                                     stock_name=stock_info.get('name'),
-                                    timestamp=datetime.now()
                                 )
                 user_portfolio.save()
-            user_info[0].cash -= quantity*stock_info.get('price')
+            user_info[0].cash -= quantity*stock_info.get('price') * quantity
             user_info[0].save()
+            transaction = Transaction(symbol=stock_info.get('symbol'), 
+                                      price=stock_info.get('price'), 
+                                      share=quantity,
+                                      timestamp=datetime.now())
+            transaction.save()
             return redirect('index')
         else:
             return apology("You do not have enough cash")
@@ -103,8 +121,9 @@ def quote(request):
         stock_info = lookup(symbol)
         if not stock_info:
             return apology("Could not find info for the symbol")
-        return render_to_response('app/quoted.html', 
-                                  {'stock_info': stock_info})
+        return render(request, 
+                      'app/quoted.html', 
+                        {'stock_info': stock_info})
     else:
         return render(request, 'app/quote.html')
 
@@ -114,7 +133,7 @@ def sell(request):
             return apology('Symbol field cannot be empty')
         if not request.POST.get('quantity'):
             return apology('Quantity field cannot be empty')
-        symbol = request.POST.get('symbol')
+        symbol = request.POST.get('symbol').upper()
         quantity = int(request.POST.get('quantity'))
         stock_info = lookup(symbol)
         if not stock_info:
@@ -128,11 +147,17 @@ def sell(request):
         if quantity > stocks_available:
             return apology('You do not have enough stocks to sell')
         user_portfolio[0].quantity -= quantity
-        user_portfolio[0].price = stock_info.get('price')
+        user_portfolio[0].price -= stock_info.get('price')*quantity
         user_portfolio[0].save()
         user = Users.objects.filter(id=request.session.get('id'))
-        user[0].cash += stock_info.get('price')
+        user[0].cash += stock_info.get('price') * quantity
         user[0].save()
+        transaction = Transaction(symbol=stock_info.get('symbol'), 
+                                      price=stock_info.get('price'), 
+                                      share=-quantity,
+                                      timestamp=datetime.now())
+        transaction.save()
+            
         return redirect('index')
     else:
         return render(request, 'app/sell.html')

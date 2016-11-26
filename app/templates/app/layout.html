@@ -36,7 +36,7 @@
                         <a class="navbar-brand" href="index.html"><span class="blue">C</span><span class="red">$</span><span class="yellow">5</span><span class="green">0</span> <span class="red">Finance</span></a>
                     </div>
                     <div class="collapse navbar-collapse" id="navbar">
-                        {% if session_id %}
+                        {% if request.session.id %}
                             <ul class="nav navbar-nav">
                                 <li><a href="quote.html">Quote</a></li>
                                 <li><a href="buy.html">Buy</a></li>
