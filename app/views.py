@@ -7,7 +7,7 @@ from django.http import HttpRequest
 from django.template import RequestContext
 from datetime import datetime
 from helpers import apology, lookup
-from models import Users, Portfolio, Transaction
+from models import Users, Portfolio
 from datetime import datetime
 from django.core import serializers
 import json
@@ -102,11 +102,6 @@ def buy(request):
                 user_portfolio.save()
             user_info[0].cash -= quantity*stock_info.get('price') * quantity
             user_info[0].save()
-            transaction = Transaction(symbol=stock_info.get('symbol'), 
-                                      price=stock_info.get('price'), 
-                                      share=quantity,
-                                      timestamp=datetime.now())
-            transaction.save()
             return redirect('index')
         else:
             return apology("You do not have enough cash")
